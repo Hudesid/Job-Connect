@@ -1,5 +1,7 @@
 import uuid
 from datetime import timedelta
+
+from django.core.validators import RegexValidator
 from django.db import models
 from django.utils.translation import gettext_lazy as _
 from django.utils import timezone
@@ -37,7 +39,10 @@ class JobSeeker(models.Model):
     first_name = models.CharField(max_length=100)
     last_name = models.CharField(max_length=100)
     date_of_birth = models.DateField()
-    phone_number = models.CharField(max_length=30)
+    phone_number = models.CharField(max_length=30, validators=[RegexValidator(
+            regex=r'^\+998\d{9}$',
+            message="Phone number must start with '+9989' and be followed by 8 digits."
+        )])
     location = models.CharField(max_length=255)
     bio = models.TextField()
     skills = models.ManyToManyField("skills.Skill", related_name="job_seekers")
@@ -45,6 +50,10 @@ class JobSeeker(models.Model):
     education_level = models.CharField(max_length=255)
     resume = models.FileField(upload_to="job_seeker_resumes/", blank=True)
     profile_photo = models.ImageField(upload_to="job_seeker_photos/")
+
+
+    def __str__(self):
+        return f"{self.first_name} {self.last_name}"
 
 
 class Company(models.Model):
