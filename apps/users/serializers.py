@@ -1,9 +1,5 @@
-from datetime import datetime
 from django.contrib.auth import authenticate
 from rest_framework import serializers
-from rest_framework_simplejwt.token_blacklist.models import OutstandingToken
-from rest_framework_simplejwt.tokens import AccessToken
-
 from . import models
 from rest_framework_simplejwt.serializers import TokenObtainPairSerializer
 from django.contrib.auth import get_user_model
@@ -51,7 +47,7 @@ class CustomTokenObtainSerializer(TokenObtainPairSerializer):
 
 class UserDataForGetRequestsSerializer(serializers.ModelSerializer):
     class Meta:
-        model = models.User
+        model = models.JobSeeker
         fields = ('id', 'username', 'email', 'user_type', 'date_joined', 'updated_at')
 
 
@@ -62,15 +58,13 @@ class JobSeekerSerializer(serializers.ModelSerializer):
 
     class Meta:
         model = models.JobSeeker
-        fields = ('id', 'user', 'first_name', 'last_name', 'date_of_birth', 'phone_number', 'location', 'bio', 'skills', 'experience_years', 'education_level', 'profile_photo', 'resume')
+        fields = ('id', 'first_name', 'last_name', 'date_of_birth', 'phone_number', 'location', 'bio', 'skills', 'experience_years', 'education_level', 'profile_photo', 'resume')
 
 
     def create(self, validated_data):
         skills_data = validated_data.pop("skills", [])
-        from apps.skills.models import Skill
-        skills = []
-        for skill in skills_data:
-            skills.append(Skill.objects.get(id=skill))
+        if models.JobSeeker.objects.filter(user=self.context['request'].user).exists():
+            raise serializers.ValidationError("You have a profile, you can't create a second profile.")
         job_seeker = models.JobSeeker.objects.create(user=self.context['request'].user, **validated_data)
         job_seeker.skills.set(skills_data)
         job_seeker.save()
@@ -104,7 +98,7 @@ class CompanySerializer(serializers.ModelSerializer):
 
     class Meta:
         model = models.Company
-        fields = ('id', 'user', 'created_at', 'updated_at', 'name', 'description', 'website', 'industry', 'location', 'founded_year', 'employees_count', 'logo')
+        fields = ('id', 'created_at', 'updated_at', 'name', 'description', 'website', 'industry', 'location', 'founded_year', 'employees_count', 'logo')
 
 
     def perform_create(self, serializer):

@@ -13,9 +13,8 @@ from rest_framework.response import Response
 from rest_framework.views import APIView
 from rest_framework_simplejwt.authentication import JWTAuthentication
 from rest_framework_simplejwt.exceptions import TokenError
-from rest_framework_simplejwt.token_blacklist.models import OutstandingToken, BlacklistedToken
-from rest_framework_simplejwt.tokens import RefreshToken, AccessToken
-from . import serializers, models, tasks
+from rest_framework_simplejwt.tokens import RefreshToken
+from . import serializers, models, tasks, versioning
 from .paginations import CompanyPageNumberPagination
 from django_filters.rest_framework import DjangoFilterBackend
 from rest_framework.filters import SearchFilter
@@ -26,6 +25,8 @@ from django.utils.translation import gettext_lazy as _
 class RegisterAPIView(CreateAPIView):
     queryset = models.User.objects.all()
     serializer_class = serializers.UserSerializer
+    versioning_class = versioning.CustomHeaderVersioning
+
 
     def create(self, request, *args, **kwargs):
         serializer = self.get_serializer(data=request.data)
@@ -61,6 +62,8 @@ class RegisterAPIView(CreateAPIView):
 
 
 class VerifyEmailAPIView(APIView):
+    versioning_class = versioning.CustomHeaderVersioning
+
     def get(self, request, pk, token, *args, **kwargs):
 
         try:
@@ -88,6 +91,8 @@ class VerifyEmailAPIView(APIView):
 
 
 class ForgotPasswordAPIView(APIView):
+    versioning_class = versioning.CustomHeaderVersioning
+
     def post(self, request, *args, **kwargs):
         email = request.data.get("email")
 
@@ -114,6 +119,8 @@ class ForgotPasswordAPIView(APIView):
 
 
 class RecoveryPasswordAPIView(APIView):
+    versioning_class = versioning.CustomHeaderVersioning
+
     def get(self, request, pk=None, token=None, *args, **kwargs):
         token_data = models.Token.objects.get(token=token)
 
@@ -145,33 +152,38 @@ class RecoveryPasswordAPIView(APIView):
 
 class LoginAPIView(TokenObtainPairView):
     serializer_class = serializers.CustomTokenObtainSerializer
+    versioning_class = versioning.CustomHeaderVersioning
 
     def post(self, request, *args, **kwargs):
-        response = super().post(request, *args, **kwargs)
-        access_token = response.data.get('access')
-        refresh_token = response.data.get('refresh')
+        version = self.request.version
+        if version == '1.0':
+            response = super().post(request, *args, **kwargs)
+            access_token = response.data.get('access')
+            refresh_token = response.data.get('refresh')
 
-        if access_token and refresh_token:
-            return Response({
-                "status": True,
-                "message": "Tizimga muvaffaqiyatli kirildi.",
-                "data": {
-                    "access": f"{access_token}",
-                    "refresh": f"{refresh_token}"
-                }
-            }, status=status.HTTP_200_OK)
+            if access_token and refresh_token:
+                return Response({
+                    "status": True,
+                    "message": "Tizimga muvaffaqiyatli kirildi.",
+                    "data": {
+                        "access": f"{access_token}",
+                        "refresh": f"{refresh_token}"
+                    }
+                }, status=status.HTTP_200_OK)
 
-        else:
-            return Response({
-                "status": False,
-                "message": "Tizimga kirishda xatolik yuz berdi.",
-                "errors": {
-                    "detail": "Email yoki parol noto'g'ri.",
-                }
-            }, status=status.HTTP_400_BAD_REQUEST)
+            else:
+                return Response({
+                    "status": False,
+                    "message": "Tizimga kirishda xatolik yuz berdi.",
+                    "errors": {
+                        "detail": "Email yoki parol noto'g'ri.",
+                    }
+                }, status=status.HTTP_400_BAD_REQUEST)
 
 
 class TokenRefreshAPIView(TokenRefreshView):
+    versioning_class = versioning.CustomHeaderVersioning
+
     def post(self, request, *args, **kwargs):
         response = super().post(request, *args, **kwargs)
         access_token = response.data.get('access', None)
@@ -198,6 +210,7 @@ class TokenRefreshAPIView(TokenRefreshView):
 class LogoutAPIView(APIView):
     permission_classes = [IsAuthenticated]
     authentication_classes = [JWTAuthentication,]
+    versioning_class = versioning.CustomHeaderVersioning
 
     def post(self, request, *args, **kwargs):
         try:
@@ -233,30 +246,34 @@ class UserProfileCreateAPIView(CreateAPIView):
     queryset = models.JobSeeker.objects.all()
     serializer_class = serializers.JobSeekerSerializer
     permission_classes = [IsAuthenticated]
+    versioning_class = versioning.CustomHeaderVersioning
+
 
     def create(self, request, *args, **kwargs):
-        serializer = self.get_serializer(data=request.data)
-        if serializer.is_valid():
-            profile = serializer.save()
-            user = models.User.objects.get(self=profile.user)
-            user_data = serializers.UserSerializer(user).data
-            return Response({
-                "status": True,
-                "message": "Ish qidiruvchi profili muvaffaqiyatli yaratildi.",
-                "data": {user_data}
-            }, status=status.HTTP_201_CREATED)
+        version = self.request.version
+        if version == '1.0':
+            serializer = self.get_serializer(data=request.data)
+            if serializer.is_valid():
+                profile = serializer.save()
+                return Response({
+                    "status": True,
+                    "message": "Ish qidiruvchi profili muvaffaqiyatli yaratildi.",
+                    "data": serializer.validated_data
+                }, status=status.HTTP_201_CREATED)
 
-        else:
-            return Response({
-                "status": False,
-                "message": "Noto'g'ri malumot kiritilgan"
-            }, status=status.HTTP_400_BAD_REQUEST)
+            else:
+                return Response({
+                    "status": False,
+                    "message": "Noto'g'ri malumot kiritilgan",
+                    "errors": serializer.errors
+                }, status=status.HTTP_400_BAD_REQUEST)
 
 
 class UserProfileRetrieveUpdateDestroyAPIView(RetrieveUpdateDestroyAPIView, UserPassesTestMixin):
     queryset = models.JobSeeker.objects.all()
     serializer_class = serializers.JobSeekerSerializer
     permission_classes = [IsAuthenticated]
+    versioning_class = versioning.CustomHeaderVersioning
 
 
     def get_object(self):
@@ -314,10 +331,13 @@ class UserProfileRetrieveAPIView(RegisterAPIView):
     queryset = models.User.objects.all()
     serializer_class = serializers.UserDataForGetRequestsSerializer
     permission_classes = [IsAuthenticated]
+    versioning_class = versioning.CustomHeaderVersioning
 
 
 class ResumeUploadingAPIView(APIView, UserPassesTestMixin):
     permission_classes = [IsAuthenticated]
+    versioning_class = versioning.CustomHeaderVersioning
+
 
     def post(self, request, *args, **kwargs):
         try:
@@ -354,6 +374,7 @@ class CompanyCreateAPIView(CreateAPIView):
     queryset = models.Company.objects.all()
     serializer_class = serializers.CompanySerializer
     permission_classes = [IsAuthenticated]
+    versioning_class = versioning.CustomHeaderVersioning
 
 
     def post(self, request, *args, **kwargs):
@@ -380,6 +401,7 @@ class CompanyListAPIView(ListAPIView):
     queryset = models.Company.objects.all()
     serializer_class = serializers.CompanySerializer
     pagination_class = CompanyPageNumberPagination
+    versioning_class = versioning.CustomHeaderVersioning
     permission_classes = [IsAuthenticated]
     filter_backends = [DjangoFilterBackend, SearchFilter]
     search_fields = ['name', 'industry']
@@ -402,6 +424,7 @@ class CompanyListAPIView(ListAPIView):
 class CompanyRetrieveAPIView(RetrieveAPIView):
     queryset = models.Company.objects.all()
     serializer_class = serializers.CompanySerializer
+    versioning_class = versioning.CustomHeaderVersioning
 
 
     def retrieve(self, request, *args, **kwargs):
@@ -419,6 +442,8 @@ class CompanyRetrieveUpdateDestroyAPIView(RetrieveUpdateDestroyAPIView, UserPass
     queryset = models.Company.objects.all()
     serializer_class = serializers.CompanySerializer
     permission_classes = [IsAuthenticated]
+    versioning_class = versioning.CustomHeaderVersioning
+
 
     def test_func(self):
         company = self.get_object()
@@ -431,6 +456,7 @@ class UsersStatsListAPIView(ListAPIView):
     serializer_class = serializers.UserSerializer
     permission_classes = [IsAuthenticated]
     pagination_class = CompanyPageNumberPagination
+    versioning_class = versioning.CustomHeaderVersioning
 
 
     def list(self, request, *args, **kwargs):
