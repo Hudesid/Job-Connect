@@ -166,7 +166,9 @@ REST_FRAMEWORK = {
     'DEFAULT_THROTTLE_RATES': {
         'user': '100/minute',
         'anon': '100/minute',
-    }
+    },
+    'DEFAULT_VERSIONING_CLASS': ['rest_framework.versioning.AcceptHeaderVersioning'],
+    'DEFAULT_VERSION': '1.0',
 }
 
 SIMPLE_JWT = {

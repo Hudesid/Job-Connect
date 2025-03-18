@@ -201,14 +201,15 @@ class LogoutAPIView(APIView):
 
     def post(self, request, *args, **kwargs):
         try:
-            refresh_token = request.data.get('refresh')
+            refresh_token = self.request.data['refresh']
             if not refresh_token:
                 return Response({
                     "status": False,
                     "errors": "Refresh token is required.",
                 }, status=status.HTTP_400_BAD_REQUEST)
 
-            RefreshToken(refresh_token).blacklist()
+            token = RefreshToken(refresh_token)
+            token.blacklist()
 
             return Response({
                 "status": True,
@@ -236,7 +237,8 @@ class UserProfileCreateAPIView(CreateAPIView):
     def create(self, request, *args, **kwargs):
         serializer = self.get_serializer(data=request.data)
         if serializer.is_valid():
-            user = serializer.save()
+            profile = serializer.save()
+            user = models.User.objects.get(self=profile.user)
             user_data = serializers.UserSerializer(user).data
             return Response({
                 "status": True,

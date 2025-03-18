@@ -58,18 +58,21 @@ class UserDataForGetRequestsSerializer(serializers.ModelSerializer):
 class JobSeekerSerializer(serializers.ModelSerializer):
     profile_photo = serializers.ImageField(required=False, allow_null=True)
     resume = serializers.FileField(required=False, allow_null=True)
+    phone_number = serializers.CharField(min_length=12)
 
     class Meta:
         model = models.JobSeeker
-        fields = ('id', 'first_name', 'last_name', 'date_of_birth', 'phone_number', 'location', 'bio', 'skills', 'experience_years', 'education_level', 'profile_photo', 'resume')
+        fields = ('id', 'user', 'first_name', 'last_name', 'date_of_birth', 'phone_number', 'location', 'bio', 'skills', 'experience_years', 'education_level', 'profile_photo', 'resume')
 
 
     def create(self, validated_data):
         skills_data = validated_data.pop("skills", [])
-        job_seeker = models.JobSeeker.objects.create(**validated_data)
+        from apps.skills.models import Skill
+        skills = []
         for skill in skills_data:
-            job_seeker.skills.add(skill)
-        job_seeker.user = self.context['request'].user
+            skills.append(Skill.objects.get(id=skill))
+        job_seeker = models.JobSeeker.objects.create(user=self.context['request'].user, **validated_data)
+        job_seeker.skills.set(skills_data)
         job_seeker.save()
         return job_seeker
 
@@ -93,6 +96,7 @@ class JobSeekerSerializer(serializers.ModelSerializer):
         representation = super().to_representation(instance)
         from apps.skills.serializers import SkillSerializer
         representation['skills'] = SkillSerializer(instance.skills, many=True).data
+        representation['user'] = UserSerializer(instance.user).data
         return representation
 
 class CompanySerializer(serializers.ModelSerializer):
