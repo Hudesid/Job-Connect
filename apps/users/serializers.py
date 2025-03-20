@@ -1,8 +1,14 @@
 from django.contrib.auth import authenticate
+from django.db import transaction
+from django.utils import timezone
 from rest_framework import serializers
+from rest_framework_simplejwt.exceptions import TokenError
+from rest_framework_simplejwt.tokens import RefreshToken
+
 from . import models
 from rest_framework_simplejwt.serializers import TokenObtainPairSerializer
 from django.contrib.auth import get_user_model
+from rest_framework.exceptions import ValidationError
 
 
 class CustomTokenObtainSerializer(TokenObtainPairSerializer):
@@ -126,7 +132,6 @@ class UserSerializer(serializers.ModelSerializer):
 
     def to_representation(self, instance):
         representation = super().to_representation(instance)
-        representation['profile'] = JobSeekerSerializer(instance.profile).data
         representation['date_joined'] = instance.date_joined
         representation['updated_at'] = instance.updated_at
         return representation
@@ -136,3 +141,136 @@ class UserSerializer(serializers.ModelSerializer):
         serializer.save(is_verify_email=False, is_active=False)
 
 
+
+class VerifyEmailSerializer(serializers.Serializer):
+    pk = serializers.IntegerField()
+    token = serializers.CharField()
+
+    def validate(self, attrs):
+        pk = attrs['pk']
+        token = attrs['token']
+
+        try:
+            user = models.User.objects.get(id=pk)
+            token = models.Token.objects.get(token=token)
+
+        except models.User.DoesNotExist:
+            raise serializers.ValidationError({"error": "The user ID is wrong"})
+
+        except models.Token.DoesNotExist:
+            raise serializers.ValidationError({"error": "The token is wrong"})
+
+        if token.expires_at <= timezone.now() and not user.is_verify_email:
+            with transaction.atomic():
+                token.delete()
+                user.delete()
+            raise serializers.ValidationError(
+                {"error": f"Token vaqti o'tib ketdi shu sababli {user.username} o'chirib tashlandi."}
+            )
+
+        user.is_active = True
+        user.is_verify_email = True
+        user.save()
+        token.delete()
+        attrs['user'] = UserSerializer(user).data
+        return attrs
+
+
+class ForgotPasswordSerializer(serializers.Serializer):
+    email = serializers.EmailField()
+
+    def validate(self, attrs):
+        email = attrs['email']
+        if not email:
+            raise serializers.ValidationError({"error": "Email kiritish muhum."})
+
+        try:
+            user = models.User.objects.get(email=email)
+
+        except models.User.DoesNotExist:
+            raise serializers.ValidationError({"error": "Foydalanuvchi bunday email bilan topilmadi."})
+
+        attrs['user'] = user
+        return attrs
+
+
+class RecoveryPasswordGetSerializer(serializers.Serializer):
+    pk = serializers.IntegerField()
+    token = serializers.CharField()
+
+
+    def validate(self, attrs):
+        pk = attrs['pk']
+        token = attrs['token']
+
+        try:
+            user = models.User.objects.get(id=pk)
+            token = models.Token.objects.get(token=token)
+
+        except models.User.DoesNotExist:
+            raise serializers.ValidationError({"error": "Foydalanuvchi bunday ID bilan topilmadi."})
+
+        except models.Token.DoesNotExist:
+            raise serializers.ValidationError({"error": "Token serverda topilmadi."})
+
+        if token is None:
+            raise serializers.ValidationError({'error': "Token bo'lishi shart."})
+
+        if token.expires_at <= timezone.now():
+            raise serializers.ValidationError(
+                {"error": f"Token vaqti o'tib ketdi shu sababli token o'chirib tashaldi."}
+            )
+
+        attrs['user'] = UserSerializer(user).data
+        return attrs
+
+
+class RecoveryPasswordPostSerializer(serializers.Serializer):
+    new_password = serializers.CharField(write_only=True, min_length=8)
+
+
+    def validate(self, attrs):
+        new_password = attrs['new_password']
+        id = self.context['pk']
+        token = self.context['token']
+        user = models.User.objects.get(id=id)
+        token = models.Token.objects.get(token=token)
+
+        if not new_password:
+            raise serializers.ValidationError({"error": "Parol kiritish shart."})
+
+        if not user:
+            raise serializers.ValidationError({"error": "Foydalanuvchi bu id bilan hali topilmadi."})
+
+        if not token:
+            raise serializers.ValidationError({"error": "Foydalanuvchi bu token bilan topilmadi"})
+
+        user.set_password(new_password)
+        user.save()
+        token.delete()
+        attrs['user'] = UserSerializer(user).data
+        return attrs
+
+
+class LogoutSerializer(serializers.Serializer):
+    refresh_token = serializers.CharField()
+
+
+    def validate(self, attrs):
+        refresh = attrs['refresh_token']
+        try:
+            if not refresh:
+                raise serializers.ValidationError({"error": "Refresh token is required."})
+
+            token = RefreshToken(refresh)
+            token.blacklist()
+
+
+        except TokenError as e:
+            raise serializers.ValidationError({"errors": f"Token error: {str(e)}"})
+
+        except Exception as e:
+            raise serializers.ValidationError({"errors": f"An error occurred: {str(e)}"})
+
+        attrs['user'] = UserSerializer(self.context['request'].user).data
+        return attrs

@@ -190,6 +190,10 @@ CELERY_BEAT_SCHEDULE = {
         'task': 'apps.posts.tasks.update_active_post',
         'schedule': crontab(minute='*/1'),
     },
+    'delete-tokens-that-expired-time': {
+        'task': 'apps.users.tasks.delete_tokens_expired',
+        'schedule': crontab(minute='*/15'),
+    },
 }
 
 

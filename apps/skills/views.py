@@ -5,12 +5,14 @@ from .serializers import Skill, SkillSerializer
 from rest_framework.permissions import IsAdminUser
 from .paginations import SkillPageNumberPagination
 from rest_framework.filters import SearchFilter, OrderingFilter
+from apps.users.versioning import CustomHeaderVersioning
 
 
 class SkillModelViewSet(ModelViewSet):
     queryset = Skill.objects.all()
     serializer_class = SkillSerializer
     permission_classes = [IsAdminUser]
+    versioning_class = CustomHeaderVersioning
     pagination_class = SkillPageNumberPagination
     filter_backends = [SearchFilter, OrderingFilter]
     search_fields = ['name', 'category']
@@ -19,20 +21,22 @@ class SkillModelViewSet(ModelViewSet):
 
 
     def create(self, request, *args, **kwargs):
-        serializer = self.get_serializer(data=request.data)
+        version = self.request.version
+        if version == '1.0':
+            serializer = self.get_serializer(data=request.data)
 
-        if serializer.is_valid():
-            skill = serializer.save()
-            return Response({
-                "status": True,
-                "message": "Ko'nikma muvaffaqiyatli qo'shildi.",
-                "data": {skill}
-            }, status=status.HTTP_201_CREATED)
+            if serializer.is_valid():
+                skill = serializer.save()
+                return Response({
+                    "status": True,
+                    "message": "Ko'nikma muvaffaqiyatli qo'shildi.",
+                    "data": {skill}
+                }, status=status.HTTP_201_CREATED)
 
-        else:
-            return Response({
-                "status": False,
-                "error": "Noto'g'ri ma'lumot kiritlgan.",
-            }, status=status.HTTP_400_BAD_REQUEST)
+            else:
+                return Response({
+                    "status": False,
+                    "error": "Noto'g'ri ma'lumot kiritlgan.",
+                }, status=status.HTTP_400_BAD_REQUEST)
 
 

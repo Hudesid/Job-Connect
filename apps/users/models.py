@@ -6,6 +6,7 @@ from django.utils.translation import gettext_lazy as _
 from django.utils import timezone
 from django.contrib.auth.models import AbstractUser, PermissionsMixin
 from .managers import CustomUserManager
+from apps.skills.models import Skill
 
 
 class User(AbstractUser, PermissionsMixin):
@@ -44,7 +45,7 @@ class JobSeeker(models.Model):
         )])
     location = models.CharField(max_length=255)
     bio = models.TextField()
-    skills = models.ManyToManyField("skills.Skill", related_name="job_seekers")
+    skills = models.ManyToManyField(Skill, related_name="job_seekers")
     experience_years = models.IntegerField()
     education_level = models.CharField(max_length=255)
     resume = models.FileField(upload_to="job_seeker_resumes/", blank=True, null=True)
