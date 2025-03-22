@@ -4,16 +4,17 @@ from django.shortcuts import get_object_or_404
 from django.utils import timezone
 from django.contrib.auth.mixins import UserPassesTestMixin
 from rest_framework.generics import CreateAPIView, UpdateAPIView, DestroyAPIView, ListAPIView, ListCreateAPIView, RetrieveAPIView, RetrieveUpdateDestroyAPIView
+from rest_framework.views import APIView
 from . import serializers, models, paginations, tasks
 from rest_framework.permissions import IsAuthenticated, BasePermission
 from rest_framework.response import Response
-from rest_framework import status
 from rest_framework.filters import SearchFilter, OrderingFilter
 from django_filters.rest_framework import DjangoFilterBackend
 from apps.users.models import JobSeeker,Company
 from apps.skills.models import Skill
 from apps.users.versioning import CustomHeaderVersioning
 from apps.users.custom_response_decorator import custom_response
+from apps.users.serializers import CompanySerializer, JobSeekerSerializer
 
 
 class CompanyActiveBasePermission(BasePermission):
@@ -507,3 +508,42 @@ class JobApplicationStatsListAPIView(ListAPIView):
             }
 
             return Response(response_data)
+
+
+@custom_response("search")
+class SearchAPIView(APIView):
+    queryset = models.JobPosting.objects.all()
+
+    def get(self, request, *args, **kwargs):
+        search_query = request.GET.get('q', None)
+
+        if not search_query:
+            posts = self.queryset
+            posts_data = serializers.JopPostingSerializer(posts, many=True).data
+            return Response({
+                "job_postings": posts_data,
+                "companies": [],
+                "profiles": []
+            })
+
+        posts = self.queryset.filter(title__icontains=search_query)
+
+        companies = Company.objects.filter(
+            Q(name__icontains=search_query) | Q(industry__icontains=search_query)
+        )
+
+        profiles = JobSeeker.objects.filter(
+            Q(first_name__icontains=search_query) |
+            Q(last_name__icontains=search_query) |
+            Q(phone_number__icontains=search_query)
+        )
+
+        posts_data = serializers.JopPostingSerializer(posts, many=True).data
+        companies_data = CompanySerializer(companies, many=True).data
+        profiles_data = JobSeekerSerializer(profiles, many=True).data
+
+        return Response({
+            "job_postings": posts_data,
+            "companies": companies_data,
+            "profiles": profiles_data
+        })

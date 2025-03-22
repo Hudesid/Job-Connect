@@ -52,7 +52,8 @@ codes = {
     "saved_job": "Vakansiya muvaffaqiyatli saqlandi.",
     "saved_job_delete": "Saqlangan vakansiya muvaffaqiyatli o'chirildi.",
     "job_posting_stats": "Vakansiyalar statistikasi muvaffaqiyatli olindi.",
-    "job_application_stats": "Arizalar statistikasi muvaffaqiyatli olindi."
+    "job_application_stats": "Arizalar statistikasi muvaffaqiyatli olindi.",
+    "search": "Ma'lumotlar muvaffaqiyatli olindi."
 }
 
 
@@ -157,6 +158,8 @@ def custom_response(mark):
                     data['message'] = codes["job_posting_stats"]
                 elif mark == "job_application_stats":
                     data['message'] = codes["job_application_stats"]
+                elif mark == "search":
+                    data['message'] = codes["search"]
             response.data = data
             return response
 

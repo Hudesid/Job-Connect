@@ -1,0 +1,4 @@
+-r base.text
+
+django-debug-toolbar==5.0.1
+drf-yasg=1.21.9
