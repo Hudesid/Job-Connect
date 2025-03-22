@@ -11,8 +11,6 @@ from rest_framework.permissions import IsAuthenticated
 from rest_framework.response import Response
 from rest_framework.views import APIView
 from rest_framework_simplejwt.authentication import JWTAuthentication
-from rest_framework_simplejwt.exceptions import TokenError
-from rest_framework_simplejwt.tokens import RefreshToken
 from . import serializers, models, tasks, versioning
 from .paginations import CompanyPageNumberPagination
 from django_filters.rest_framework import DjangoFilterBackend
@@ -131,7 +129,7 @@ class LogoutAPIView(APIView):
     def post(self, request, *args, **kwargs):
         version = self.request.version
         if version == '1.0':
-            serializer = serializers.LogoutSerializer(data=request.data)
+            serializer = serializers.LogoutSerializer(data=request.data, context={"request": request})
             serializer.is_valid(raise_exception=True)
             return Response(serializer.validated_data)
 
