@@ -6,9 +6,10 @@ from rest_framework import status
 response structure
 
 {
-    status_code : 200,
-    errors {},
-    data {}
+    status: True or False,
+    message: "something"
+    errors: {},
+    data: {}
 }
 """
 
