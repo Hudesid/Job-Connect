@@ -9,22 +9,39 @@ from apps.users.models import JobSeeker
 class JopPostingSerializer(serializers.ModelSerializer):
     class Meta:
         model = models.JobPosting
-        fields = ('id', 'company', 'title', 'location', 'job_type', 'experience_level', 'salary_min', 'salary_max', 'deadline', 'requirements', 'responsibilities', 'education_required', 'skills_required')
+        fields = ('id', 'title', 'location', 'job_type', 'experience_level', 'salary_min', 'salary_max', 'deadline', 'requirements', 'responsibilities', 'education_required', 'skills_required')
 
 
-    def perform_create(self, serializer):
-        company = self.context['request'].user.company
-        serializer.save(company=company)
+    def create(self, validated_data):
+        from apps.users.models import Company
+        company = Company.objects.get(user=self.context['request'].user)
+        if company.is_active == False:
+            raise serializers.ValidationError({"error": "Sizga tegishli kompaniya profile tasdiqlanmagan."})
+        skills = validated_data.pop("skills_required", [])
+        post = models.JobPosting.objects.create(company=company, **validated_data)
+        post.skills_required.set(skills)
+        post.save()
+        return post
 
 
-    def perform_update(self, serializer):
-        company = self.context['request'].user.company
-        serializer.save(company=company)
+    def update(self, instance, validated_data):
+        from apps.users.models import Company
+        company = Company.objects.get(user=self.context['request'].user)
+        if company.is_active == False:
+            raise serializers.ValidationError({"error": "Sizga tegishli kompaniya profile tasdiqlanmagan."})
+        for key, value in validated_data.items():
+            setattr(instance, key, value)
+        instance.company = company
+        instance.save()
+        return instance
+
 
     def to_representation(self, instance):
         representation = super().to_representation(instance)
+        from apps.skills.serializers import SkillSerializer
         from apps.users.serializers import CompanySerializer
         representation['company'] = CompanySerializer(instance.company).data
+        representation['skills_required'] = SkillSerializer(instance.skills_required, many=True).data
         representation['posted_date'] = instance.posted_date
         representation['updated_at'] = instance.updated_at
         representation['views_count'] = instance.views_count
@@ -32,31 +49,32 @@ class JopPostingSerializer(serializers.ModelSerializer):
         return representation
 
 
-class FileSizeValidator:
-    def __init__(self, max_size):
-        self.max_size = max_size
-
-    def __call__(self, value):
-        if value.size > self.max_size:
-            raise ValidationError(f"File size must not exceed {self.max_size / 1024 / 1024} MB.")
-
-
 class JobApplicationSerializer(serializers.ModelSerializer):
-    resume = serializers.FileField(validators=[
-            FileExtensionValidator(allowed_extensions=['pdf', 'docx']),
-            FileSizeValidator(max_size=5 * 1024 * 1024)
-        ])
+    resume = serializers.FileField(validators=[FileExtensionValidator(allowed_extensions=['pdf', 'docx'])])
 
     class Meta:
         model = models.JobApplication
         fields = ('id', 'job_posting', 'status', 'cover_later', 'resume')
 
 
-    def perform_create(self, serializer):
-        job_seeker = self.context['request'].user.job_seeker
-        if models.JobApplication.objects.filter(job_posting=self.instance.job_posting, job_seeker=job_seeker).exists():
-            raise serializers.ValidationError(_("You have already applied for this job."))
-        serializer.save(job_seeker=job_seeker)
+    def validate_resume(self, value):
+        max_size = 5 * 1024 * 1024  # 5 MB
+        if value and value.size > max_size:
+            raise serializers.ValidationError({"error": "Resume 5 MB dan katta bo'lishi mumkin emas."})
+        return value
+
+
+    def create(self, validated_data):
+        job_seeker = JobSeeker.objects.get(user=self.context['request'].user)
+        job_posting = models.JobPosting.objects.get(id=validated_data['job_posting'])
+        if models.JobApplication.objects.filter(job_posting=validated_data['job_posting'], job_seeker=job_seeker).exists():
+            raise serializers.ValidationError({"error": "Siz bu post ga alaqachon ariza topshirgansiz."})
+        from apps.users.models import Company
+        company = Company.objects.get(user=self.context['request'].user)
+        if job_posting.company in company:
+            raise serializers.ValidationError({"error": "Siz o'znigizni postingizga ariza bera olmaysiz."})
+        job_application = models.JobApplication.objects.create(job_seeker=job_seeker, **validated_data)
+        return job_application
 
 
     def update(self, instance, validated_data):
@@ -65,7 +83,7 @@ class JobApplicationSerializer(serializers.ModelSerializer):
             status = validated_data.get('status')
 
             if status and status != self.instance.status:
-                raise serializers.ValidationError(_("You can't replace status"))
+                raise serializers.ValidationError({"error": "Sizga tegishli arizalarni statusini o'zgartirishga huquqingiz yo'q."})
 
             else:
                 for key, value in validated_data.items():
@@ -85,6 +103,9 @@ class JobApplicationSerializer(serializers.ModelSerializer):
 
     def to_representation(self, instance):
         representation = super().to_representation(instance)
+        representation['job_posting'] = JopPostingSerializer(instance.job_posting).data
+        from apps.users.serializers import JobSeekerSerializer
+        representation['job_seeker'] = JobSeekerSerializer(instance.job_seeker).data
         representation['applied_date'] = instance.applied_date
         representation['updated_at'] = instance.updated_at
         return representation
@@ -95,19 +116,21 @@ class SavedJobSerializer(serializers.ModelSerializer):
         model = models.SavedJob
         fields = ('id', 'job_posting')
 
+
     def to_representation(self, instance):
         representation = super().to_representation(instance)
         from apps.users.serializers import JobSeekerSerializer
         representation['job_seeker'] = JobSeekerSerializer(instance.job_seeker).data
         representation['job_posting'] = JopPostingSerializer(instance.job_posting).data
+        representation['saved_date'] = instance.saved_date
         return representation
 
+
     def create(self, validated_data):
-        saved_job = models.SavedJob.objects.create(**validated_data)
         job_seeker = JobSeeker.objects.get(user=self.context['request'].user)
-        saved_job.job_seeker = job_seeker
-        saved_job.save()
+        saved_job = models.SavedJob.objects.create(job_seeker=job_seeker, **validated_data)
         return saved_job
+
 
     def update(self, instance, validated_data):
 

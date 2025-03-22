@@ -37,7 +37,7 @@ class JobPosting(models.Model):
     posted_date = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)
     deadline = models.DateField()
-    views_count = models.IntegerField()
+    views_count = models.IntegerField(default=0)
 
     def __str__(self):
         return f"{self.company.name}: {self.title}"
@@ -56,7 +56,7 @@ class JobApplication(models.Model):
     job_seeker = models.ForeignKey("users.JobSeeker", on_delete=models.CASCADE, related_name="job_applications")
     cover_later = models.TextField()
     resume = models.FileField(upload_to="job_application_resumes/")
-    status = models.CharField(max_length=30, choices=StatusChoice.choices)
+    status = models.CharField(max_length=30, choices=StatusChoice.choices, default=StatusChoice.UNDER_REVIEW)
     applied_date = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)
 

@@ -27,7 +27,7 @@ class User(AbstractUser, PermissionsMixin):
     objects = CustomUserManager()
 
     USERNAME_FIELD = "email"
-    REQUIRED_FIELDS = []
+    REQUIRED_FIELDS = ["username"]
 
 
     class Meta:
@@ -40,7 +40,7 @@ class JobSeeker(models.Model):
     last_name = models.CharField(max_length=100)
     date_of_birth = models.DateField()
     phone_number = models.CharField(max_length=30, validators=[RegexValidator(
-            regex=r'^\+998\d{9}$',
+            regex=r'^\+?[0-9]{12,15}$',
             message="Phone number must start with '+9989' and be followed by 8 digits."
         )])
     location = models.CharField(max_length=255)
@@ -64,7 +64,7 @@ class Company(models.Model):
     industry = models.CharField(max_length=255)
     location = models.CharField(max_length=255)
     founded_year = models.IntegerField()
-    logo = models.ImageField(upload_to="company_logos/")
+    logo = models.ImageField(upload_to="company_logos/", blank=True)
     employees_count = models.IntegerField()
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)

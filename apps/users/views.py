@@ -131,13 +131,12 @@ class LogoutAPIView(APIView):
     def post(self, request, *args, **kwargs):
         version = self.request.version
         if version == '1.0':
-            refresh_token = self.request.data['refresh']
             serializer = serializers.LogoutSerializer(data=request.data)
             serializer.is_valid(raise_exception=True)
-            return Response()
+            return Response(serializer.validated_data)
 
 
-
+@custom_response("job_seeker_create")
 class UserProfileCreateAPIView(CreateAPIView):
     queryset = models.JobSeeker.objects.all()
     serializer_class = serializers.JobSeekerSerializer
@@ -151,20 +150,11 @@ class UserProfileCreateAPIView(CreateAPIView):
             serializer = self.get_serializer(data=request.data)
             if serializer.is_valid():
                 serializer.save()
-                return Response({
-                    "status": True,
-                    "message": "Ish qidiruvchi profili muvaffaqiyatli yaratildi.",
-                    "data": serializer.validated_data
-                }, status=status.HTTP_201_CREATED)
-
-            else:
-                return Response({
-                    "status": False,
-                    "message": "Noto'g'ri malumot kiritilgan",
-                    "errors": serializer.errors
-                }, status=status.HTTP_400_BAD_REQUEST)
+                profile = self.serializer_class(serializer.instance).data
+                return Response(profile)
 
 
+@custom_response("my_profile")
 class UserProfileRetrieveUpdateDestroyAPIView(RetrieveUpdateDestroyAPIView, UserPassesTestMixin):
     queryset = models.JobSeeker.objects.all()
     serializer_class = serializers.JobSeekerSerializer
@@ -179,49 +169,26 @@ class UserProfileRetrieveUpdateDestroyAPIView(RetrieveUpdateDestroyAPIView, User
                 return models.JobSeeker.objects.get(user=self.request.user)
 
             except models.JobSeeker.DoesNotExist:
-                return Response({"message": "User profile topilmadi."}, status=status.HTTP_404_NOT_FOUND)
+                return Response({"status": False, "message": "User profile topilmadi."}, status=status.HTTP_404_NOT_FOUND)
 
 
     def retrieve(self, request, *args, **kwargs):
         version = self.request.version
         if version == '1.0':
-            instance = self.get_object().user
-
-            user_data = serializers.UserSerializer(instance).data
-
-            return Response({
-                "status": True,
-                "message": "Foydalanuvchi malumotlari muvaffaqiyatli olindi.",
-                "data": {user_data}
-            }, status=status.HTTP_200_OK)
-
-
+            instance = self.get_object()
+            user_data = self.serializer_class(instance).data
+            return Response(user_data)
 
 
     def update(self, request, *args, **kwargs):
         version = self.request.version
         if version == '1.0':
-            serializer = self.get_serializer()
-            if serializer.is_valid():
-                user_profile = serializer.save()
-                return Response({
-                    "status": True,
-                    "message": "Foydalanuvchi ma'lumotlari muvaffaqiyatli yangilandi.",
-                    "data": {
-                        "id": user_profile.id,
-                        "username": user_profile.user.username,
-                        "email": user_profile.user.email,
-                        "user_type": user_profile.user.user_type,
-                        "date_joined": user_profile.user.date_joined,
-                        "is_active": user_profile.user.is_active
-                    }
-                }, status=status.HTTP_200_OK)
+            serializer = self.serializer_class(self.get_object(), data=request.data, partial=True)
+            if serializer.is_valid(raise_exception=True):
+                user_data = serializer.save()
+                user_profile = self.serializer_class(user_data).data
+                return Response(user_profile)
 
-            else:
-                return Response({
-                    "status": False,
-                    "message": "Noto'g'ri ma'lumot kiritilgan.",
-                }, status=status.HTTP_400_BAD_REQUEST)
 
 
     def test_func(self):
@@ -231,53 +198,48 @@ class UserProfileRetrieveUpdateDestroyAPIView(RetrieveUpdateDestroyAPIView, User
             return self.request.user == user_profile.user
 
 
-class UserProfileRetrieveAPIView(RegisterAPIView):
-    queryset = models.User.objects.all()
-    serializer_class = serializers.UserDataForGetRequestsSerializer
+@custom_response("user_profile")
+class UserProfileRetrieveAPIView(RetrieveAPIView):
+    queryset = models.JobSeeker.objects.all()
+    serializer_class = serializers.JobSeekerSerializer
     permission_classes = [IsAuthenticated]
     versioning_class = versioning.CustomHeaderVersioning
 
 
+    def retrieve(self, request, *args, **kwargs):
+        version = self.request.version
+        if version == '1.0':
+            instance = self.get_object()
+            user_data = self.serializer_class(instance).data
+            return Response(user_data)
+
+
+@custom_response("resume_upload")
 class ResumeUploadingAPIView(APIView, UserPassesTestMixin):
     permission_classes = [IsAuthenticated]
     versioning_class = versioning.CustomHeaderVersioning
 
 
-    def post(self, request, *args, **kwargs):
+    def post(self, *args, **kwargs):
         version = self.request.version
         if version == '1.0':
-            try:
-                user_profile = models.JobSeeker.objects.get(id=self.kwargs['id'])
-            except models.JobSeeker.DoesNotExist:
-                return Response({"error": "User profile topilmadi."}, status=status.HTTP_404_NOT_FOUND)
+            pk = self.kwargs['pk']
+            serializer = serializers.ResumeUploadingSerializer(data=self.request.data, context={'pk': pk, 'request': self.request})
+            serializer.is_valid(raise_exception=True)
+            return Response(serializer.validated_data)
 
-            resume = request.data.get("resume")
-
-            if resume:
-                user_profile.resume = resume
-                user_profile.save()
-                return Response({
-                    "status": True,
-                    "message": "Rezyume muvaffaqiyatli yuklandi.",
-                    "data": {"id": user_profile.id, "resume": user_profile.resume}
-                }, status=status.HTTP_200_OK)
-
-            else:
-                return Response({
-                    "status": False,
-                    "error": "Rezyume yuklamagan.",
-                }, status=status.HTTP_400_BAD_REQUEST)
 
     def test_func(self):
         version = self.request.version
         if version == '1.0':
             try:
-                user_profile = models.JobSeeker.objects.get(id=self.kwargs['id'])
+                user_profile = models.JobSeeker.objects.get(id=self.kwargs['pk'])
             except models.JobSeeker.DoesNotExist:
                 return False
             return self.request.user == user_profile.user
 
 
+@custom_response("company_create")
 class CompanyCreateAPIView(CreateAPIView):
     queryset = models.Company.objects.all()
     serializer_class = serializers.CompanySerializer
@@ -288,31 +250,19 @@ class CompanyCreateAPIView(CreateAPIView):
     def post(self, request, *args, **kwargs):
         version = self.request.version
         if version == '1.0':
-            serializer = self.get_serializer(data=request.data)
+            serializer = self.serializer_class(data=request.data, context={"request": self.request})
 
-            if serializer.is_valid():
-                company = serializer.save()
-                company_data = serializers.CompanySerializer(company).data
-                return Response({
-                    "status": True,
-                    "message": "Kompaniya profili muvaffaqiyatli yaratildi.",
-                    "data": {company_data}
-                }, status=status.HTTP_201_CREATED)
-
-            else:
-                return Response({
-                    "status":  False,
-                    "message": "Kiritlgan malumot noto'g'ri",
-                    "errors": serializer.errors
-                }, status=status.HTTP_400_BAD_REQUEST)
+            if serializer.is_valid(raise_exception=True):
+                serializer.save()
+                return Response(serializer.validated_data)
 
 
+@custom_response("companies_list")
 class CompanyListAPIView(ListAPIView):
     queryset = models.Company.objects.all()
     serializer_class = serializers.CompanySerializer
     pagination_class = CompanyPageNumberPagination
     versioning_class = versioning.CustomHeaderVersioning
-    permission_classes = [IsAuthenticated]
     filter_backends = [DjangoFilterBackend, SearchFilter]
     search_fields = ['name', 'industry']
     filterset_fields = ['location', 'created_at', 'updated_at', 'employees_count']
@@ -320,19 +270,10 @@ class CompanyListAPIView(ListAPIView):
     def get(self, request, *args, **kwargs):
         version = self.request.version
         if version == '1.0':
-            response = self.list(request, *args, **kwargs)
-
-            return Response({
-                "status": True,
-                "message": "Kompaniyalar ro'yxati muvaffiqiyatli olindi.",
-                "data": {
-                    "count": response.data['count'],
-                    "next": response.data['next'],
-                    "previous": response.data['previous'],
-                    "results": response.data['results']
-                }}, status=status.HTTP_200_OK)
+            return super().get(request, *args, **kwargs)
 
 
+@custom_response("company_detail")
 class CompanyRetrieveAPIView(RetrieveAPIView):
     queryset = models.Company.objects.all()
     serializer_class = serializers.CompanySerializer
@@ -343,21 +284,23 @@ class CompanyRetrieveAPIView(RetrieveAPIView):
         version = self.request.version
         if version == '1.0':
             instance = self.get_object()
-            company_data = self.get_serializer(instance).data
-
-            return Response({
-                "status": True,
-                "message": "Companiya ma'lumoti muvaffaqiyatli olindi.",
-                "data": {company_data}
-            }, status=status.HTTP_200_OK)
+            company_data = self.serializer_class(instance).data
+            return Response(company_data)
 
 
+@custom_response("my_company")
 class CompanyRetrieveUpdateDestroyAPIView(RetrieveUpdateDestroyAPIView, UserPassesTestMixin):
     queryset = models.Company.objects.all()
     serializer_class = serializers.CompanySerializer
     permission_classes = [IsAuthenticated]
     versioning_class = versioning.CustomHeaderVersioning
 
+    def retrieve(self, request, *args, **kwargs):
+        version = self.request.version
+        if version == '1.0':
+            instance = self.get_object()
+            company = self.serializer_class(instance).data
+            return Response(company)
 
     def test_func(self):
         version = self.request.version
@@ -366,7 +309,7 @@ class CompanyRetrieveUpdateDestroyAPIView(RetrieveUpdateDestroyAPIView, UserPass
             return self.request.user == company.user
 
 
-
+@custom_response("users_stats")
 class UsersStatsListAPIView(ListAPIView):
     queryset = models.User.objects.all()
     serializer_class = serializers.UserSerializer
@@ -399,9 +342,6 @@ class UsersStatsListAPIView(ListAPIView):
 
 
             return Response({
-                "status": True,
-                "message": "Foydalanuvchilar statistikasi muvaffaqiyatli olindi.",
-                "data": {
                     "total_users": users.count(),
                     "job_seekers": models.JobSeeker.objects.count(),
                     "employers": models.Company.objects.count(),
@@ -409,7 +349,6 @@ class UsersStatsListAPIView(ListAPIView):
                     "active_users_last_week": active_users_last_week,
                     "users_by_location": [{"location": location['location'], "count": location["count"]} for location in users_locations],
                     "user_by_registration_date": user_by_registration_date
-                }
-            }, status=status.HTTP_200_OK)
+                })
 
 

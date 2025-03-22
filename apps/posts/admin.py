@@ -5,7 +5,7 @@ from .models import JobPosting, JobApplication, SavedJob
 @admin.register(JobPosting)
 class JobPostingAdmin(admin.ModelAdmin):
     list_display = ('id', 'title', 'job_type', 'salary_max', 'salary_min', 'is_active', 'deadline')
-    list_filter = ('job_type', 'salary_max', 'salary_min', 'is_active', 'deadline', 'experience_level', 'education_required', 'posted_date', 'updated_at', 'views_count')
+    list_filter = ('job_type', 'salary_max', 'salary_min', 'is_active', 'deadline', 'experience_level', 'education_required', 'posted_date', 'updated_at', 'views_count', "skills_required")
     search_fields = ('id', 'title', 'company__name')
 
 
