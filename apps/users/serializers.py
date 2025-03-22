@@ -8,7 +8,7 @@ from rest_framework_simplejwt.tokens import RefreshToken
 from . import models
 from rest_framework_simplejwt.serializers import TokenObtainPairSerializer
 from django.contrib.auth import get_user_model
-
+from apps.users.models import JobSeeker
 
 
 class UserSerializer(serializers.ModelSerializer):
@@ -290,7 +290,9 @@ class LogoutSerializer(serializers.Serializer):
 
 
 class ResumeUploadingSerializer(serializers.Serializer):
-    resume = serializers.FileField(validators=[FileExtensionValidator(allowed_extensions=['pdf', 'docx'])])
+    resume = serializers.FileField(
+        validators=[FileExtensionValidator(allowed_extensions=['pdf', 'docx'])]
+    )
 
     def validate_resume(self, value):
         max_size = 5 * 1024 * 1024  # 5 MB
@@ -298,23 +300,25 @@ class ResumeUploadingSerializer(serializers.Serializer):
             raise serializers.ValidationError({"error": "Resume 5 MB dan katta bo'lishi mumkin emas."})
         return value
 
-
     def validate(self, attrs):
         resume = attrs['resume']
         id = self.context['pk']
 
         if not resume:
             raise serializers.ValidationError({"error": "Resume yuklanishi kerak."})
+
         try:
-            user_profile = models.JobSeeker.objects.get(id=id)
+            user_profile = JobSeeker.objects.get(id=id)
             if user_profile.user != self.context['request'].user:
                 raise serializers.ValidationError({"error": "Bu profilga huquqingiz yo'q."})
-        except models.JobSeeker.DoesNotExist:
+        except JobSeeker.DoesNotExist:
             raise serializers.ValidationError({"error": "User profile topilmadi."})
 
 
         user_profile.resume = resume
         user_profile.save()
 
+        from .serializers import JobSeekerSerializer
+        attrs.pop('resume')
         attrs['user'] = JobSeekerSerializer(user_profile).data
         return attrs

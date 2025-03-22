@@ -29,9 +29,11 @@ class User(AbstractUser, PermissionsMixin):
     USERNAME_FIELD = "email"
     REQUIRED_FIELDS = ["username"]
 
-
     class Meta:
         app_label = 'users'
+
+    def __str__(self):
+        return self.username
 
 
 class JobSeeker(models.Model):
