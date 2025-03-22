@@ -1,4 +1,3 @@
-from rest_framework.response import Response
 from rest_framework.views import APIView
 from rest_framework import status
 
@@ -61,32 +60,15 @@ def custom_response(mark):
     def decorator(view):
         def inner(self, request, *args, **kwargs):
             response = super(view, self).dispatch(request, *args, **kwargs)
-            list_errors = []
             response_data = response.data
             data = dict(
                 status=True,
                 message="",
-                errors=list_errors,
+                errors={},
                 data={},
             )
             if response.exception:
                 data["status"] = False
-                errors =  response_data.get("errors", [])
-                for e in errors:
-                    field = e.get("field")
-                    message = e.get("message")
-                    if isinstance(message, list):
-                        message_ = message[0]
-                    else:
-                        message_ = message
-                    error_data = {
-                        "field": field,
-                        "message": message_,
-                    }
-                    if hasattr(message_, 'code'):
-                        error_data["code"] = message_.code.upper()
-                    list_errors.append(error_data)
-                data["errors"] = list_errors
                 if response.status_code == status.HTTP_400_BAD_REQUEST:
                     data["message"] = codes["400"]
                 if response.status_code == status.HTTP_404_NOT_FOUND:
