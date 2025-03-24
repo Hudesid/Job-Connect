@@ -1,8 +1,5 @@
-from rest_framework import status
 from rest_framework.viewsets import ModelViewSet
-from rest_framework.response import Response
 from .serializers import Skill, SkillSerializer
-from rest_framework.permissions import IsAdminUser
 from .paginations import SkillPageNumberPagination
 from rest_framework.filters import SearchFilter, OrderingFilter
 from apps.users.versioning import CustomHeaderVersioning
