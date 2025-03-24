@@ -13,7 +13,6 @@ from apps.users.custom_response_decorator import custom_response
 class SkillModelViewSet(ModelViewSet):
     queryset = Skill.objects.all()
     serializer_class = SkillSerializer
-    permission_classes = [IsAdminUser]
     versioning_class = CustomHeaderVersioning
     pagination_class = SkillPageNumberPagination
     filter_backends = [SearchFilter, OrderingFilter]
@@ -22,10 +21,4 @@ class SkillModelViewSet(ModelViewSet):
     ordering = ['created_at']
 
 
-    def create(self, request, *args, **kwargs):
-        version = self.request.version
-        if version == '1.0':
-            serializer = self.serializer_class(data=request.data)
-            serializer.is_valid(raise_exception=True)
-            return Response(serializer.validated_data)
 

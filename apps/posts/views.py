@@ -354,7 +354,7 @@ class JobPostingApplicationListAPIView(ListAPIView):
 
 
 @custom_response("saved_job_list")
-class SavedJobListAPIView(ListAPIView):
+class SavedJobListAPIView(ListCreateAPIView):
     queryset = models.SavedJob.objects.all()
     serializer_class = serializers.SavedJobSerializer
     permission_classes = [IsAuthenticated]
@@ -376,14 +376,6 @@ class SavedJobListAPIView(ListAPIView):
         version = self.request.version
         if version == '1.0':
             return self.list(request, *args, **kwargs)
-
-
-@custom_response("saved_job")
-class SavedJobCreateAPIView(CreateAPIView):
-    queryset = models.SavedJob.objects.all()
-    serializer_class = serializers.SavedJobSerializer
-    permission_classes = [IsAuthenticated]
-    versioning_class = CustomHeaderVersioning
 
 
     def create(self, request, *args, **kwargs):

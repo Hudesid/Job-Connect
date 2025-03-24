@@ -14,7 +14,6 @@ urlpatterns = [
     path("job-postings/<int:pk>/applications/", views.JobPostingApplicationListAPIView.as_view(), name="applications_of_job_postings"),
     path("applications/my-application/<int:pk>/", views.JobApplicationRetrieveUpdateDestroyAPIView.as_view(), name="my_application_detail"),
     path("saved-jobs/", views.SavedJobListAPIView.as_view(), name="saved_jobs"),
-    path("saved-jobs/create/", views.SavedJobCreateAPIView.as_view(), name="saved_jobs_create"),
     path("saved-jobs/delete/<int:pk>/", views.SavedJobDestroyAPIView.as_view(), name="saved_jobs_update"),
     path("stats/job-postings/", views.JobPostingStatsListAPIView.as_view(), name="job_postings_stats"),
     path("stats/applications/", views.JobApplicationStatsListAPIView.as_view(), name="job_applications_stats")

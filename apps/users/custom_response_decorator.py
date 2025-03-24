@@ -132,9 +132,7 @@ def custom_response(mark):
                 elif mark == "post_applications":
                     data['message'] = codes["post_applications"]
                 elif mark == "saved_job_list":
-                    data['message'] = codes["saved_job_list"]
-                elif mark == "saved_job":
-                    data['message'] = codes["saved_job"]
+                    data['message'] = (codes["saved_job_list"] if request.method == 'GET' else codes["saved_job"])
                 elif mark == "saved_job_delete":
                     data['message'] = codes["saved_job_delete"]
                 elif mark == "job_posting_stats":
