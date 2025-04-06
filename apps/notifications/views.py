@@ -1,13 +1,15 @@
+from django_filters.rest_framework import DjangoFilterBackend
+from rest_framework import status
+from rest_framework.filters import OrderingFilter
 from rest_framework.generics import ListAPIView
 from rest_framework.permissions import IsAuthenticated
-from rest_framework.views import APIView
-from . import models, serializers, paginations
-from rest_framework.filters import OrderingFilter
 from rest_framework.response import Response
-from rest_framework import status
-from django_filters.rest_framework import DjangoFilterBackend
-from apps.users.versioning import CustomHeaderVersioning
+from rest_framework.views import APIView
+
 from apps.users.custom_response_decorator import custom_response
+from apps.users.versioning import CustomHeaderVersioning
+
+from . import models, paginations, serializers
 
 
 @custom_response("notifications_list")
@@ -102,7 +104,3 @@ class NotificationsUpdateAPIView(ListAPIView):
             return Response({
                 "count": notifications.count()
             })
-
-
-
-

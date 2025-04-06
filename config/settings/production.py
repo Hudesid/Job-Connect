@@ -1,20 +1,15 @@
 from .base import *  # noqa
 
-ALLOWED_HOSTS = [
-    "api.example.com",
-    "admin.example.com",
-    "localhost",
-    "127.0.0.1",
-    "your server ip",
-]
+ALLOWED_HOSTS = env.list('ALLOWED_HOSTS')
 
-CSRF_TRUSTED_ORIGINS = ["https://api.example.com", "https://admin.example.com"]
-CORS_ALLOWED_ORIGINS = ["https://api.example.com", "https://admin.example.com"]
+CSRF_TRUSTED_ORIGINS = env.list('CSRF_TRUSTED_ORIGINS')
+CORS_ALLOWED_ORIGINS = env.list('CORS_ALLOWED_ORIGINS')
 
 DEBUG = False
 
 CSRF_COOKIE_SECURE = True
 SESSION_COOKIE_SECURE = True
+SECURE_SSL_REDIRECT = True
 SECURE_HSTS_SECONDS = 60 * 60 * 24 * 7 * 52
 SECURE_HSTS_INCLUDE_SUBDOMAINS = True
 SECURE_HSTS_PRELOAD = True

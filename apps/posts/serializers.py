@@ -1,7 +1,9 @@
 from django.core.validators import FileExtensionValidator
 from rest_framework import serializers
-from . import models
+
 from apps.users.models import JobSeeker
+
+from . import models
 
 
 class JopPostingSerializer(serializers.ModelSerializer):
@@ -139,4 +141,3 @@ class SavedJobSerializer(serializers.ModelSerializer):
         instance.job_seeker = job_seeker
         instance.save()
         return instance
-

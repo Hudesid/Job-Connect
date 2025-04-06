@@ -1,4 +1,5 @@
 from __future__ import absolute_import, unicode_literals
+
 from celery import shared_task
 from django.utils import timezone
 
@@ -14,8 +15,9 @@ def update_status_application_notification(user_id, id, post_title):
 
 @shared_task
 def new_posting_notification(post_id, post_title, company_id):
-    from apps.users.models import Company
     from apps.notifications.models import Notification
+    from apps.users.models import Company
+
     from .models import JobApplication, JobPosting
 
     company = Company.objects.get(id=company_id)

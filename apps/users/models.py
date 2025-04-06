@@ -1,12 +1,15 @@
 import uuid
 from datetime import timedelta
+
+from django.contrib.auth.models import AbstractUser, PermissionsMixin
 from django.core.validators import RegexValidator
 from django.db import models
-from django.utils.translation import gettext_lazy as _
 from django.utils import timezone
-from django.contrib.auth.models import AbstractUser, PermissionsMixin
-from .managers import CustomUserManager
+from django.utils.translation import gettext_lazy as _
+
 from apps.skills.models import Skill
+
+from .managers import CustomUserManager
 
 
 class User(AbstractUser, PermissionsMixin):

@@ -1,22 +1,29 @@
 from datetime import timedelta
-from django.db.models import Count
-from django.db.models.functions import TruncMonth
-from django.utils import timezone
+
 from django.contrib.auth.mixins import UserPassesTestMixin
 from django.contrib.sites.shortcuts import get_current_site
+from django.db.models import Count
+from django.db.models.functions import TruncMonth
 from django.urls import reverse
+from django.utils import timezone
+from django_filters.rest_framework import DjangoFilterBackend
 from rest_framework import status
-from rest_framework.generics import CreateAPIView, ListAPIView, RetrieveAPIView, RetrieveUpdateDestroyAPIView
+from rest_framework.filters import SearchFilter
+from rest_framework.generics import (
+    CreateAPIView,
+    ListAPIView,
+    RetrieveAPIView,
+    RetrieveUpdateDestroyAPIView,
+)
 from rest_framework.permissions import IsAuthenticated
 from rest_framework.response import Response
 from rest_framework.views import APIView
 from rest_framework_simplejwt.authentication import JWTAuthentication
-from . import serializers, models, tasks, versioning
-from .paginations import CompanyPageNumberPagination
-from django_filters.rest_framework import DjangoFilterBackend
-from rest_framework.filters import SearchFilter
 from rest_framework_simplejwt.views import TokenObtainPairView, TokenRefreshView
+
+from . import models, serializers, tasks, versioning
 from .custom_response_decorator import custom_response
+from .paginations import CompanyPageNumberPagination
 
 
 @custom_response("register")
@@ -348,5 +355,3 @@ class UsersStatsListAPIView(ListAPIView):
                     "users_by_location": [{"location": location['location'], "count": location["count"]} for location in users_locations],
                     "user_by_registration_date": user_by_registration_date
                 })
-
-

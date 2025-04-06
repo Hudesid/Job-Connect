@@ -1,7 +1,8 @@
-from rest_framework.test import APITestCase, APIClient
-from rest_framework import status
 from datetime import timedelta
+
 from django.utils import timezone
+from rest_framework import status
+from rest_framework.test import APIClient, APITestCase
 
 
 class JobPostingListTestCase(APITestCase):

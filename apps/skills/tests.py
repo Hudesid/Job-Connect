@@ -1,5 +1,5 @@
-from rest_framework.test import APITestCase, APIClient
 from rest_framework import status
+from rest_framework.test import APIClient, APITestCase
 
 
 class SkillModelViewSetTestCase(APITestCase):
@@ -33,7 +33,3 @@ class SkillModelViewSetTestCase(APITestCase):
     def test_destroy_delete(self):
         response = self.client.get('/api/skills/1/', format='json')
         self.assertEqual(response.status_code, status.HTTP_200_OK)
-
-
-
-

@@ -1,5 +1,6 @@
 from django.contrib import admin
-from .models import JobPosting, JobApplication, SavedJob
+
+from .models import JobApplication, JobPosting, SavedJob
 
 
 @admin.register(JobPosting)
@@ -19,4 +20,3 @@ class JobApplicationAdmin(admin.ModelAdmin):
 class SavedJobAdmin(admin.ModelAdmin):
     list_display = ('id', 'saved_date')
     list_filter = ('saved_date',)
-

@@ -1,14 +1,15 @@
-from django.contrib.auth import authenticate
+from django.contrib.auth import authenticate, get_user_model
 from django.core.validators import FileExtensionValidator, RegexValidator
 from django.db import transaction
 from django.utils import timezone
 from rest_framework import serializers
 from rest_framework_simplejwt.exceptions import TokenError
-from rest_framework_simplejwt.tokens import RefreshToken
-from . import models
 from rest_framework_simplejwt.serializers import TokenObtainPairSerializer
-from django.contrib.auth import get_user_model
+from rest_framework_simplejwt.tokens import RefreshToken
+
 from apps.users.models import JobSeeker
+
+from . import models
 
 
 class UserSerializer(serializers.ModelSerializer):
@@ -231,7 +232,7 @@ class RecoveryPasswordGetSerializer(serializers.Serializer):
 
         if token.expires_at <= timezone.now():
             raise serializers.ValidationError(
-                {"error": f"Token vaqti o'tib ketdi shu sababli token o'chirib tashaldi."}
+                {"error": "Token vaqti o'tib ketdi shu sababli token o'chirib tashaldi."}
             )
 
         attrs['user'] = UserSerializer(user).data

@@ -1,6 +1,9 @@
-from rest_framework.views import APIView
-from rest_framework import status
+import logging
 
+from rest_framework import status
+from rest_framework.views import APIView
+
+logger = logging.getLogger(__name__)
 
 """
 response structure
@@ -75,6 +78,7 @@ def custom_response(mark):
                 if response.status_code == status.HTTP_404_NOT_FOUND:
                     data['message'] = codes['404']
                 data['errors'] = response_data
+                logger.error(f"Error occurred: {response_data}")
             else:
                 data["data"] = (response_data.get("user") if mark in ["verify_email", "recovery_password", "logout"] else response_data)
                 if mark == "login":

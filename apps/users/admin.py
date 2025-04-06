@@ -1,7 +1,12 @@
 from django.contrib import admin
-from django.contrib.auth.forms import UserChangeForm, UserCreationForm, AdminPasswordChangeForm
-from .models import User, Token, JobSeeker, Company
 from django.contrib.auth.admin import UserAdmin as BaseUserAdmin
+from django.contrib.auth.forms import (
+    AdminPasswordChangeForm,
+    UserChangeForm,
+    UserCreationForm,
+)
+
+from .models import Company, JobSeeker, Token, User
 
 
 class CustomUserCreationForm(UserCreationForm):

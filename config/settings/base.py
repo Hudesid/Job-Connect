@@ -9,10 +9,11 @@ https://docs.djangoproject.com/en/5.1/topics/settings/
 For the full list of settings and their values, see
 https://docs.djangoproject.com/en/5.1/ref/settings/
 """
+import os
+import sys
 from datetime import timedelta
 from pathlib import Path
-import sys
-import os
+
 import environ
 from celery.schedules import crontab
 

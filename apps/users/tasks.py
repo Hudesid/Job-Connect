@@ -1,9 +1,10 @@
 from __future__ import absolute_import, unicode_literals
+
 from celery import shared_task
+from django.conf import settings
 from django.core.mail import send_mail
 from django.utils import timezone
 from django.utils.translation import gettext_lazy as _
-from django.conf import settings
 
 
 @shared_task
@@ -46,5 +47,5 @@ def delete_tokens_expired():
     try:
         tokens = Token.objects.filter(expires_at__lte=timezone.now())
         tokens.delete()
-    except Exception as e:
+    except Exception:
         return "Token o'chirishda hato yuz berdi."
